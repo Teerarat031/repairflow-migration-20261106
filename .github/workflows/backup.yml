@@ -1,0 +1,32 @@
+name: Cloudflare Backup
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run Backup Process
+        run: |
+          echo "Starting Cloudflare D1 and R2 backup process..."
+          
+      - name: Commit and push backup data
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add .
+          git commit -m "chore: automated cloudflare backup [skip ci]" || echo "No changes to commit"
+          git push
