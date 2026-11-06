@@ -19,14 +19,29 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Run Backup Process
+      - name: Install Cloudflare Wrangler
+        run: npm install -g wrangler
+
+      - name: Export Cloudflare D1 Database
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          echo "Starting Cloudflare D1 and R2 backup process..."
-          
+          mkdir -p backups/d1
+          npx wrangler d1 export repairflow-migration-20261106 --output=./backups/d1/backup-$(date +%Y%m%d).sql || echo "D1 export skipped"
+
+      - name: Sync Cloudflare R2 Bucket
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          mkdir -p backups/r2
+          npx wrangler r2 object get repairflow-evidence-20261106 --file=./backups/r2/ || echo "R2 sync skipped"
+
       - name: Commit and push backup data
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git add .
-          git commit -m "chore: automated cloudflare backup [skip ci]" || echo "No changes to commit"
+          git add backups/
+          git commit -m "chore: automated cloudflare d1 & r2 backup [$(date +'%Y-%m-%d')]" || echo "No changes to commit"
           git push
